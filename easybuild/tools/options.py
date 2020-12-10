@@ -606,6 +606,12 @@ class EasyBuildOptions(GeneralOption):
             'terse': ("Terse output (machine-readable)", None, 'store_true', False),
             'easystack': ("Path to easystack file in YAML format, specifying details of a software stack",
                           None, 'store', None),
+            'include-labels': ("Expecting labels. When building with Easystack, software with include-labels \
+                defined inside YAML file will only install if required labels are provided in command line",
+                               None, 'store', None),
+            'exclude-labels': ("Expecting labels. When building with Easystack, software with exclude-labels \
+                defined inside YAML file will only install if required labels are NOT provided in command line",
+                               None, 'store', None),
         })
 
         self.log.debug("informative_options: descr %s opts %s" % (descr, opts))
