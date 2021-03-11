@@ -5466,82 +5466,84 @@ class CommandLineOptionsTest(EnhancedTestCase):
         expected_err = "No such file or directory: '%s'" % toy_easystack
         self.assertErrorRegex(EasyBuildError, expected_err, self.eb_main, args, raise_error=True)
 
-    # testing basics - end-to-end
-    # expecting successful build
-    def test_easystack_basic(self):
-        """Test for --easystack <easystack.yaml> -> success case"""
+    # test whether, when general options (--robot, --parallel) are included, easystack prints correct commands
+    def test_easystack_print_only(self):
+        """Test for --easystack <easystack.yaml> -> general options"""
         topdir = os.path.dirname(os.path.abspath(__file__))
-        toy_easystack = os.path.join(topdir, 'easystacks', 'test_easystack_basic.yaml')
+        toy_easystack = os.path.join(topdir, 'easystacks', 'test_easystack_print_only.yaml')
 
-        args = ['--easystack', toy_easystack, '--stop', '--debug', '--experimental']
+        args = ['--easystack', toy_easystack, '--debug', '--experimental']
         stdout, err = self.eb_main(args, do_build=True, return_error=True)
         patterns = [
             r"[\S\s]*INFO Building from easystack:[\S\s]*",
-            r"[\S\s]*DEBUG EasyStack parsed\. Proceeding to install these Easyconfigs:.*?[\n]"
-            r"[\S\s]*INFO building and installing binutils/2\.25-GCCcore-4\.9\.3[\S\s]*",
-            r"[\S\s]*INFO building and installing binutils/2\.26-GCCcore-4\.9\.3[\S\s]*",
-            r"[\S\s]*INFO building and installing toy/0\.0-gompi-2018a-test[\S\s]*",
-            r"[\S\s]*INFO COMPLETED: Installation STOPPED successfully[\S\s]*",
-            r"[\S\s]*INFO Build succeeded for 3 out of 3[\S\s]*"
+            r"[\S\s]*Printing commands only, since a not-fully-supported keyword has been used:"
+            r"[\S\s]*eb SQLite-3.8.10.2-foss-2018a.eb --robot --force --parallel=12 ;[\S\s]*",
+            r"[\S\s]*eb SQLite-3.8.10.2-gompi-2018a.eb --robot --force --parallel=6 --from-pr=1234xyz ;[\S\s]*"
         ]
         for pattern in patterns:
             regex = re.compile(pattern)
             self.assertTrue(regex.match(stdout) is not None)
 
     # test whether, when general options (--robot, --parallel) are included, easystack prints correct commands
-    def test_easystack_general_options(self):
+    def test_easystack_basic_install(self):
         """Test for --easystack <easystack.yaml> -> general options"""
         topdir = os.path.dirname(os.path.abspath(__file__))
-        toy_easystack = os.path.join(topdir, 'easystacks', 'test_easystack_basic.yaml')
+        toy_easystack = os.path.join(topdir, 'easystacks', 'test_easystack_basic_install.yaml')
 
-        args = ['--easystack', toy_easystack, '--stop', '--debug', '--experimental']
+        args = ['--easystack', toy_easystack, '--stop', '--debug', '--force', '--experimental']
         stdout, err = self.eb_main(args, do_build=True, return_error=True)
-        print(stdout)
-        # patterns = [
-        #     r"[\S\s]*INFO Building from easystack:[\S\s]*",
-        #     r"[\S\s]*DEBUG EasyStack parsed\. Proceeding to install these Easyconfigs:.*?[\n]"
-        #     r"[\S\s]*INFO building and installing binutils/2\.25-GCCcore-4\.9\.3[\S\s]*",
-        #     r"[\S\s]*INFO building and installing binutils/2\.26-GCCcore-4\.9\.3[\S\s]*",
-        #     r"[\S\s]*INFO building and installing toy/0\.0-gompi-2018a-test[\S\s]*",
-        #     r"[\S\s]*INFO COMPLETED: Installation STOPPED successfully[\S\s]*",
-        #     r"[\S\s]*INFO Build succeeded for 3 out of 3[\S\s]*"
-        # ]
-        # for pattern in patterns:
-        #     regex = re.compile(pattern)
-        #     self.assertTrue(regex.match(stdout) is not None)
+        patterns = [
+            r"[\S\s]*INFO Building from easystack:[\S\s]*",
+            r"[\S\s]*DEBUG EasyStack parsed\. Proceeding to install these Easyconfigs:.*?[\n]"
+            r"[\S\s]*INFO building and installing SQLite/3\.8\.10\.2-foss-2018a[\S\s]*",
+            r"[\S\s]*INFO building and installing SQLite/3\.8\.10\.2-gompi-2018a[\S\s]*",
+            r"[\S\s]*INFO COMPLETED: Installation STOPPED successfully[\S\s]*",
+            r"[\S\s]*INFO Build succeeded for 2 out of 2[\S\s]*"
+        ]
+        for pattern in patterns:
+            regex = re.compile(pattern)
+            self.assertTrue(regex.match(stdout) is not None)
 
-
-    def test_easystack_wrong_structure(self):
-        """Test for --easystack <easystack.yaml> when yaml easystack has wrong structure"""
-        easybuild.tools.build_log.EXPERIMENTAL = True
-        topdir = os.path.dirname(os.path.abspath(__file__))
-        toy_easystack = os.path.join(topdir, 'easystacks', 'test_easystack_wrong_structure.yaml')
-
-        expected_err = r"[\S\s]*An error occurred when interpreting the data for software Bioconductor:"
-        expected_err += r" 'float' object is not subscriptable[\S\s]*"
-        expected_err += r"| 'float' object has no attribute '__getitem__'[\S\s]*"
-        self.assertErrorRegex(EasyBuildError, expected_err, parse_easystack, toy_easystack)
-
-    def test_easystack_asterisk(self):
-        """Test for --easystack <easystack.yaml> when yaml easystack contains asterisk (wildcard)"""
-        easybuild.tools.build_log.EXPERIMENTAL = True
-        topdir = os.path.dirname(os.path.abspath(__file__))
-        toy_easystack = os.path.join(topdir, 'easystacks', 'test_easystack_asterisk.yaml')
-
-        expected_err = "EasyStack specifications of 'binutils' in .*/test_easystack_asterisk.yaml contain asterisk. "
-        expected_err += "Wildcard feature is not supported yet."
-
-        self.assertErrorRegex(EasyBuildError, expected_err, parse_easystack, toy_easystack)
-
-    def test_easystack_labels(self):
+    # tests whether include and exclude labels are read & interpretted correctly
+    def test_easystack_labels_print_only(self):
         """Test for --easystack <easystack.yaml> when yaml easystack contains exclude-labels / include-labels"""
         easybuild.tools.build_log.EXPERIMENTAL = True
         topdir = os.path.dirname(os.path.abspath(__file__))
         toy_easystack = os.path.join(topdir, 'easystacks', 'test_easystack_labels.yaml')
 
-        error_msg = "EasyStack specifications of 'binutils' in .*/test_easystack_labels.yaml contain labels. "
-        error_msg += "Labels aren't supported yet."
-        self.assertErrorRegex(EasyBuildError, error_msg, parse_easystack, toy_easystack)
+        args = ['--easystack', toy_easystack, '--include-labels', 'gompi,whoompi', '--exclude-labels', 'no_foss,no_fuss', '--experimental']
+        stdout, err = self.eb_main(args, do_build=True, return_error=True)
+        patterns = [
+            r"[\S\s]*Building from easystack:[\S\s]*",
+            r"[\S\s]*Printing commands only, since a not-fully-supported keyword has been used:[\S\s]*",
+            r"[\S\s]*eb SQLite-3\.8\.10\.2-gompi-2018a\.eb --robot --force;[\S\s]*",
+        ]
+        for pattern in patterns:
+            regex = re.compile(pattern)
+            self.assertTrue(regex.match(stdout) is not None)
+
+    def test_easystack_wrong_structure(self):
+        """Test for --easystack <easystack.yaml> when yaml easystack has wrong structure"""
+        easybuild.tools.build_log.EXPERIMENTAL = True
+        topdir = os.path.dirname(os.path.abspath(__file__))
+        # todo dorobit viac testov
+        toy_easystack = os.path.join(topdir, 'easystacks', 'test_easystack_wrong_structure.yaml')
+
+        expected_err = r"[\S\s]*An error occurred when interpreting the easystack for software Bioconductor:"
+        expected_err += r" 'float' object is not subscriptable[\S\s]*"
+        self.assertErrorRegex(EasyBuildError, expected_err, parse_easystack, toy_easystack)
+
+    # todo add support + finish test
+    # def test_easystack_asterisk(self):
+    #     """Test for --easystack <easystack.yaml> when yaml easystack contains asterisk (wildcard)"""
+    #     easybuild.tools.build_log.EXPERIMENTAL = True
+    #     topdir = os.path.dirname(os.path.abspath(__file__))
+    #     toy_easystack = os.path.join(topdir, 'easystacks', 'test_easystack_asterisk.yaml')
+
+    #     expected_err = "EasyStack specifications of 'binutils' in .*/test_easystack_asterisk.yaml contain asterisk. "
+    #     expected_err += "Wildcard feature is not supported yet."
+
+    #     self.assertErrorRegex(EasyBuildError, expected_err, parse_easystack, toy_easystack)
 
 
 def suite():

@@ -1,7 +1,14 @@
+robot: true
+force: true
 software:
-  binutils:
+  SQLite:
     toolchains:
-      GCCcore-4.9.3:
+      foss-2018a:
         versions:
-            3.11:
-              exclude-labels: arch:aarch64
+          3.8.10.2:
+            exclude-labels: 'no_foss'
+      gompi-2018a:
+        versions:
+          3.8.10.2:
+            include-labels: 'gompi'
+
